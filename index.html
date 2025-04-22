@@ -2,11 +2,272 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>はじめてのGitHuddddb Pages</title>
+    <!-- スマートフォン表示 & PWAのためのmetaタグ -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> <!-- ステータスバーのスタイル -->
+    <meta name="theme-color" content="#f4f4f4"> <!-- アプリのテーマカラー -->
+
+    <title>紫外線グラフ（小田原）</title>
+
+    <!-- Web App Manifestへのリンク (別途 manifest.json ファイルが必要) -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- iOS用アイコン指定（任意ですが、ホーム画面追加時に使用される） -->
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png"> <!-- 例: 192x192のアイコン -->
+
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --background-color: #f4f4f4;
+            --container-background: #ffffff;
+            --text-color: #333;
+            --secondary-text-color: #5a5a5a;
+            --border-color: #ddd;
+            --button-bg: #eee;
+            --button-active-bg: var(--primary-color);
+            --button-active-text: #fff;
+            --error-bg: #f8d7da;
+            --error-border: #dc3545;
+            --error-text: var(--error-border);
+        }
+        html {
+            box-sizing: border-box;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0; /* bodyのマージンを削除 */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); /* iPhoneのノッチや下部バー領域を考慮 */
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex; /* 中央寄せのため */
+            flex-direction: column;
+            min-height: 100vh; /* 縦いっぱいに広げる */
+        }
+        .container {
+            width: 100%; /* 横幅いっぱいに */
+            max-width: 600px; /* スマホでの最大幅は適宜調整 */
+            margin: 0 auto; /* 水平中央寄せ */
+            padding: 15px;
+            background: var(--container-background);
+            flex-grow: 1; /* コンテンツが少なくてもフッターを最下部に（今回はフッターなし） */
+            /* PWAらしく、影や角丸は控えめにするか、削除も検討 */
+             box-shadow: none;
+             border-radius: 0;
+        }
+        h1 {
+            text-align: center;
+            color: var(--secondary-text-color);
+            font-size: 1.5em; /* 少し大きめに */
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        .date-selector {
+            display: flex; /* ボタンを横並び */
+            justify-content: space-around; /* 均等配置 */
+            margin-bottom: 25px;
+            gap: 10px; /* ボタン間の隙間 */
+        }
+        .date-selector button {
+            flex-grow: 1; /* 横幅を分け合う */
+            padding: 12px 10px; /* タップしやすいように上下パディングを増やす */
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-radius: 8px; /* 少し角丸に */
+            background-color: var(--button-bg);
+            font-size: 1em; /* ボタンの文字サイズ */
+            -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+            transition: background-color 0.2s ease; /* 背景色変化を滑らかに */
+        }
+        .date-selector button.active {
+            background-color: var(--button-active-bg);
+            color: var(--button-active-text);
+            border-color: var(--button-active-bg);
+            font-weight: bold;
+        }
+        #display-date-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            color: var(--secondary-text-color);
+        }
+        /* 画像表示エリア: スマホでは縦に並べる */
+        .image-display {
+            display: flex;
+            flex-direction: column; /* 縦積み */
+            gap: 25px; /* 各画像コンテナ間の隙間 */
+            margin-top: 10px;
+        }
+        .image-container {
+            width: 100%; /* 横幅いっぱいに */
+            text-align: center;
+        }
+        .image-container h2 {
+            font-size: 1.2em;
+            color: var(--text-color);
+            margin-bottom: 8px;
+        }
+        .image-container img {
+            max-width: 100%; /* 親要素の幅に合わせる */
+            height: auto; /* アスペクト比を維持 */
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            display: block; /* 中央寄せやマージン調整のため */
+            margin: 0 auto; /* 中央寄せ */
+        }
+        .error-message {
+            display: none; /* 初期状態では非表示 */
+            color: var(--error-text);
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px dashed var(--error-border);
+            border-radius: 4px;
+            background-color: var(--error-bg);
+            font-size: 0.9em;
+        }
+    </style>
 </head>
 <body>
-    <h1>Hello World!</h1>
-    <p>GitHub Pagffffffesで公開されました！</p>
+
+<div class="container">
+    <h1>紫外線グラフ<br>（小田原）</h1> <!-- 改行追加も考慮 -->
+
+    <div class="date-selector">
+        <button id="btn-today" onclick="handleDateButtonClick('today')">本日<br>(<span id="today-date-label"></span>)</button>
+        <button id="btn-tomorrow" onclick="handleDateButtonClick('tomorrow')">明日<br>(<span id="tomorrow-date-label"></span>)</button>
+    </div>
+
+    <h2 id="display-date-title"></h2>
+
+    <div class="image-display">
+        <div class="image-container">
+            <h2>晴天時（理論値）</h2>
+            <img id="img-clear" src="" alt="晴天時のUVインデックスグラフ" onerror="handleImageError(this)">
+            <span class="error-message">画像が見つかりません。<br>データがまだ発表されていないか、期間外の可能性があります。</span>
+        </div>
+        <div class="image-container">
+            <h2>予測値</h2>
+            <img id="img-forecast" src="" alt="予測値のUVインデックスグラフ" onerror="handleImageError(this)">
+            <span class="error-message">画像が見つかりません。<br>データがまだ発表されていないか、期間外の可能性があります。</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const placeName = "Odawara"; // 地点名
+    const baseUrl = "https://www.data.jma.go.jp/env/uvindex/imgs/graph/";
+
+    const today = new Date(); // 現在のローカル時刻
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    // YYYYMMDD形式の文字列を生成する関数
+    function getDateString(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    }
+
+    // M月D日形式の文字列を生成する関数
+    function getDisplayDate(date) {
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        return `${month}月${day}日`;
+    }
+
+    // 今日の日付文字列
+    const todayStr = getDateString(today);
+    // 明日の日付文字列
+    const tomorrowStr = getDateString(tomorrow);
+
+    // ボタンのラベルに日付を設定
+    document.getElementById('today-date-label').textContent = getDisplayDate(today);
+    document.getElementById('tomorrow-date-label').textContent = getDisplayDate(tomorrow);
+
+    // 画像URLを生成し、表示を更新する関数
+    function updateImages(targetDateStr, displayDateLabel) {
+        const publishDateStr = todayStr; // 発表日は常に本日とする
+
+        const clearSkyUrl = `${baseUrl}${publishDateStr}/jp/${placeName}_C${targetDateStr}.png`;
+        const forecastUrl = `${baseUrl}${publishDateStr}/jp/${placeName}_U${targetDateStr}.png`;
+
+        const imgClear = document.getElementById('img-clear');
+        const imgForecast = document.getElementById('img-forecast');
+        const errorClear = imgClear.nextElementSibling; // imgの次の要素（エラーメッセージ用span）
+        const errorForecast = imgForecast.nextElementSibling; // imgの次の要素
+
+        document.getElementById('display-date-title').textContent = `${displayDateLabel} の情報（${getDisplayDate(today)} 発表）`;
+
+        // 画像を表示する前にエラーメッセージを隠し、img要素を表示状態にする
+        imgClear.style.display = 'block'; // display: block に変更
+        if (errorClear) errorClear.style.display = 'none';
+        imgForecast.style.display = 'block'; // display: block に変更
+        if (errorForecast) errorForecast.style.display = 'none';
+
+        // src属性を設定（これにより画像が読み込まれる。失敗するとonerrorが発火）
+        // キャッシュ対策としてタイムスタンプを追加するのも有効
+        // imgClear.src = `${clearSkyUrl}?t=${Date.now()}`;
+        // imgForecast.src = `${forecastUrl}?t=${Date.now()}`;
+        imgClear.src = clearSkyUrl;
+        imgForecast.src = forecastUrl;
+
+
+        // alt属性も更新
+        imgClear.alt = `${displayDateLabel} 晴天時のUVインデックスグラフ (${getDisplayDate(today)}発表)`;
+        imgForecast.alt = `${displayDateLabel} 予測値のUVインデックスグラフ (${getDisplayDate(today)}発表)`;
+    }
+
+    // 画像読み込みエラー時の処理
+    function handleImageError(imgElement) {
+        imgElement.style.display = 'none'; // 画像を隠す
+        const errorMessageElement = imgElement.nextElementSibling;
+        if (errorMessageElement && errorMessageElement.classList.contains('error-message')) {
+            errorMessageElement.style.display = 'block'; // エラーメッセージを表示
+        }
+    }
+
+    // 日付選択ボタンのクリック処理
+    function handleDateButtonClick(target) {
+        const todayBtn = document.getElementById('btn-today');
+        const tomorrowBtn = document.getElementById('btn-tomorrow');
+
+        if (target === 'today') {
+            updateImages(todayStr, getDisplayDate(today));
+            todayBtn.classList.add('active');
+            tomorrowBtn.classList.remove('active');
+        } else { // target === 'tomorrow'
+            updateImages(tomorrowStr, getDisplayDate(tomorrow));
+            todayBtn.classList.remove('active');
+            tomorrowBtn.classList.add('active');
+        }
+    }
+
+    // ----- PWA関連: Service Workerの登録 -----
+    // Service Workerが利用可能か確認し、登録する
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js') // 別途 sw.js ファイルが必要
+                .then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+        });
+    }
+
+    // 初期表示（翌日データを表示）
+    handleDateButtonClick('tomorrow');
+
+</script>
+
 </body>
 </html>
